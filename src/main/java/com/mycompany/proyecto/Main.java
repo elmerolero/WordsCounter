@@ -13,6 +13,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JFrame;
@@ -29,49 +33,67 @@ public class Main extends Canvas{
     char caracteresNoValidos[] = { '.', ',', '-', '(', ')', ';', '\"', '\'', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
     
     public static void main( String[] args ){
-        File archivo = new File( "datos.txt" );
-        long tamanio = archivo.length();
-        tamanio = tamanio / 4;
-        System.out.println( tamanio );
-        Map< String, Integer > datos = new HashMap< String, Integer >();
-        
-        JFrame ventana = new JFrame( "4 cores");
-        ventana.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
-        JProgressBar progreso = new JProgressBar( 0, 100 );
-        ventana.setLayout( new BorderLayout() );
-        ventana.add( progreso, BorderLayout.SOUTH );
-        Histograma canvas = new Histograma( datos );
-        ventana.add( canvas, BorderLayout.CENTER );
-        ventana.setSize( 800, 480 );
-        ventana.setVisible( true );
-            
-        // Indica de cuantos cores le corresponde a cada hilo
-        progreso.setValue( 0 );
-        
-        // Indica cuántos bytes le corresponden a un hilo
-        System.out.println( "Le corresponde a un hilo: " + tamanio );
-        Thread hilo1 = new Lector( progreso,  0, tamanio, datos );
-        Thread hilo2 = new Lector( progreso, tamanio, (tamanio * 2),  datos );
-        Thread hilo3 = new Lector( progreso, (tamanio * 2), (tamanio * 3), datos );
-        Thread hilo4 = new Lector( progreso, (tamanio * 3), (tamanio * 4), datos );
-
-        // Inicia los 4 hilos
-        hilo1.start();
-        hilo2.start();
-        hilo3.start();
-        hilo4.start();
-
         try{
-            // Espera a que cada uno finalize su ejecución
-            hilo1.join();
-            hilo2.join();
-            hilo3.join();
-            hilo4.join();
-            System.out.println( datos.size() );
+            long startTime = System.nanoTime();
+            File archivo = new File( "datos.txt" );
+            Path path = Paths.get("datos.txt");
+            String fileContent = new String( Files.readAllBytes(path) );
+            String[] words = fileContent.split("\\s+");
+            int availableProcessors = Runtime.getRuntime().availableProcessors();
+            int numberOfWords = words.length / availableProcessors;
+            
+            System.out.println("Content: " + fileContent.length());
+            System.out.println("Available processors: " + availableProcessors);
+            System.out.println("Number of words: " + words.length);
+            System.out.println("Number of words per processor: " + numberOfWords);
+
+            JFrame ventana = new JFrame( "Words counter - " + availableProcessors + " cores");
+            ventana.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+            JProgressBar progreso = new JProgressBar( 0, 100 );
+            ventana.setLayout( new BorderLayout() );
+            
+            // Create the threads
+            Lector[] threads = new Lector[availableProcessors];
+            for(int counter = 0; counter < threads.length; counter++){
+                // Gets words
+                int start = counter * numberOfWords;
+                int end = start + numberOfWords;
+                String[] givenWords = Arrays.copyOfRange(words, start, end );
+                
+                // Creates a new thread
+                threads[counter] = new Lector(givenWords, new HashMap< String, Integer >());
+                threads[counter].start();
+            }
+            
+            // Wait to finish
+            Map<String, Integer> localMap = new HashMap<String, Integer>();
+            for (Lector thread : threads) {
+                thread.join();
+                Map<String, Integer> threadMap = thread.getMap();
+                for(Map.Entry<String, Integer> entry : threadMap.entrySet()){
+                    localMap.merge(entry.getKey(), entry.getValue(), Integer::sum);
+                }
+            }
+            
+            ventana.add( progreso, BorderLayout.SOUTH );
+            Histograma canvas = new Histograma( localMap );
+            ventana.add( canvas, BorderLayout.CENTER );
+            ventana.setSize( 800, 480 );
+            ventana.setVisible( true );
+
+            // Indica de cuantos cores le corresponde a cada hilo
+            progreso.setValue( 100 );
             canvas.actualizar();
+            System.out.println("Done");
+            long endTime = System.nanoTime();
+            long durationInMs = (endTime - startTime) / 1_000_000; // convertir a milisegundos
+            System.out.println("Elapsed time: " + durationInMs + " ms");
+        }
+        catch( IOException ex ){
+            System.out.println(ex.toString());
         }
         catch( InterruptedException e ){
             System.out.println( e.toString() );
         }
-    }
+    }      
 }

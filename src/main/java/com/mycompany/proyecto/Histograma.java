@@ -53,10 +53,11 @@ public class Histograma extends Canvas {
     public void paint(Graphics g) {
         for( int i = 0; i < 25; i++ ){
             if( contadores[ i ] != null && palabras[ i ] != null ){
-                g.fillRect( 1 + ( ( i * 28 ) + ( i * 5 ) ), 50, 26, (int)((double)contadores[ i ] / (double)contadores[ 0 ] * 100 ) );
-                g.setFont( new Font( null, Font.PLAIN, 7 ) );
-                g.drawString( palabras[ i ], 1 + (i * 32), 10 );
-                g.drawString( contadores[ i ].toString(), 1 + (i * 32), 30 );
+                g.fillRect( 200, 10 + ( ( i * 20 ) + ( i * 5 ) ), (int)((double)contadores[ i ] / (double)contadores[ 0 ] * 100 ), 20 );
+                g.setFont( new Font( null, Font.PLAIN, 10 ) );
+                g.drawString( String.valueOf(i + 1), 20, 20 + (i * 20) + ( i * 5 ) );
+                g.drawString( palabras[ i ], 50, 20 + (i * 20) + ( i * 5 ) );
+                g.drawString( contadores[ i ].toString(), 120, 20 + (i * 20) + (i * 5) );
             }
         }
         

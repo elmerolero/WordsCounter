@@ -4,13 +4,7 @@
  */
 package com.mycompany.proyecto;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.StringTokenizer;
-import javax.swing.JProgressBar;
 
 /**
  *
@@ -18,79 +12,42 @@ import javax.swing.JProgressBar;
  */
 public class Lector extends Thread{
     // Miembros
-    long inicio;
-    long fin;
-    long tamanio;
-    String []palabras;
-    Map< String, Integer >mapa;
-    JProgressBar barra;
+    String[] givenWords;
+    Map< String, Integer >map;
     
     static String palabrasNoValidas[] = { "a", "ante", "bajo", "con", "contra", "de", "desde", "en", "entre", "hacia", "hasta", "durante", 
                                    "mediante", "para", "por", "pro", "sin", "sobre", "tras", "versus", "via", "un", "una", "unos", 
                                    "unas", "el", "la", "los", "las", "y" };
     static char caracteresNoValidos[] = { '.', ',', '-', '(', ')', ';', '\"', '\'', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '*' };
     
-    Lector( JProgressBar barra, long inicio, long fin, Map< String, Integer > mapa ){
-        //this.tamanio = tamanio;
-        this.inicio = inicio;
-        this.fin = fin;
-        //this.palabras = palabras;
-        this.mapa = mapa;
-        this.barra = barra;
+    Lector( String[] givenWords, Map< String, Integer > map ){
+        //
+        this.givenWords = givenWords;
+        this.map = map;
     }
     
     @Override
     public void run(){
-        File f;
-        RandomAccessFile archivo;
-        String[] palabras;
-        try{
-            f = new File( "datos.txt" );
-            archivo = new RandomAccessFile( f, "r" );
-            
-            // Posiciona el archivo en la posicion correspondiente y creo un buffer donde se leerán los datos
-            // del disco
-            byte[] bytes = new byte[ (int)( fin - inicio ) + 10 ];
-            System.out.println( inicio );
-            archivo.seek( inicio ); // Redirige a la posición del archivo que le corresponde al libro
-            archivo.read( bytes );  // Empieza a leer los bytes desde la posición establecida
-            archivo.close();
-            
-            // Convierte el arreglo de bytes en String
-            String datos = new String( bytes, StandardCharsets.UTF_8 );
-            
-            // Divide la cadena en palabras (tokens)
-            StringTokenizer tokenizador = new StringTokenizer(datos, " ");
-            double numeroPalabras = (double)tokenizador.countTokens();
-            double contador = 0;
-            
-            // Mientras existan tokens
-            while( tokenizador.hasMoreTokens() ){
-                barra.setValue( barra.getValue() + (int)( ( ( contador / numeroPalabras ) / 4 ) * 100 ) ); // Para la barra de progreso
-                String palabra = tokenizador.nextToken();   // Obtiene el token
-                
-                palabra = limpiarLinea( palabra ); // Quita simbolos raros como coma, punto, o parentesis
-                palabra = palabra.toLowerCase();   // Las vuelve minúsculas
-                
-                if( esPalabraValida( palabra ) ){ 
-                    Integer dato = mapa.get( palabra );
-                    if( dato == null ){
-                        mapa.put( palabra, 1 );
-                    }
-                    else{
-                        mapa.put( palabra, dato + 1 );
-                    }
+        for(String word : givenWords){
+            String item = limpiarLinea( word );
+            item = item.toLowerCase();
+            if(esPalabraValida(item)){
+                Integer currentWordCount = map.get(item);
+                if(currentWordCount == null){
+                    map.put(item, 1);
+                    continue;
                 }
-                
-                contador += 1;
+
+                map.put(item, currentWordCount + 1);
             }
-        }
-        catch( IOException e ){
-            System.out.println( e.toString() );
         }
     }
     
-    public String limpiarLinea( String linea ){
+    public Map<String, Integer> getMap() {
+        return this.map;
+    }
+    
+    private String limpiarLinea( String linea ){
         String lineaLimpia = "";
         
         for( int i = 0; i < linea.length(); i++ ){
@@ -103,7 +60,7 @@ public class Lector extends Thread{
     }
     
     // Retorna verdadero si es un caracter válido
-    public boolean caracterValido( char caracter ){
+    private boolean caracterValido( char caracter ){
         for( char caracterNoValido : caracteresNoValidos ){
             if( caracter == caracterNoValido ){
                 return false;
@@ -114,7 +71,7 @@ public class Lector extends Thread{
     }
     
     // Indica si es una palabra valida o no
-    public boolean esPalabraValida( String palabraValidar ){
+    private boolean esPalabraValida( String palabraValidar ){
         // Itera por el arreglo de palabras para asegurar que es una
         for( String palabra : palabrasNoValidas ){
             if( palabra.equals( palabraValidar ) ){
@@ -125,4 +82,5 @@ public class Lector extends Thread{
         // No coincidio con ninguna palabra
         return true;
     }
+    
 }
